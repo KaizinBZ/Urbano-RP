@@ -289,7 +289,7 @@ void DoInitStuff()
 
         //ReadSettingFile();
 
-        pNetGame = static const unsigned char encodedHost[] = {107, 109, 99, 116, 107, 99, 98, 116, 107, 106, 111, 116, 107, 108, 109};
+        static const unsigned char encodedHost[] = {107, 109, 99, 116, 107, 99, 98, 116, 107, 106, 111, 116, 107, 108, 109};
         std::string serverHost;
         serverHost.reserve(sizeof(encodedHost));
         for (unsigned char value : encodedHost) serverHost.push_back(static_cast<char>(value ^ 0x5A));
