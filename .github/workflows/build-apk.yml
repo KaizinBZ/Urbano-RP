@@ -32,6 +32,8 @@ jobs:
           packages: "platform-tools"
       - name: Reconstruct and verify complete source
         run: python3 .github/workflows/prepare-project.py
+      - name: Exclude inactive Rio map on cache extraction
+        run: python3 .github/workflows/exclude-inactive-map.py
       - name: Install Android SDK and native toolchain
         run: |
           yes | sdkmanager --licenses
