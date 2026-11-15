@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "source/READY.txt"
       - "gradlew"
       - "settings.gradle"
       - "build.gradle"
@@ -29,6 +30,8 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: "platform-tools"
+      - name: Reconstruct and verify complete source
+        run: python3 .github/workflows/prepare-project.py
       - name: Install Android SDK and native toolchain
         run: |
           yes | sdkmanager --licenses
@@ -40,26 +43,22 @@ jobs:
       - name: Restore persistent signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.URBANO_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.URBANO_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.URBANO_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.URBANO_KEY_PASSWORD }}
         run: |
           test -n "$KEYSTORE_BASE64" || (echo 'Persistent signing key is not configured' >&2; exit 1)
-          test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/urbano-release.p12"
           chmod 600 "$RUNNER_TEMP/urbano-release.p12"
           echo "URBANO_KEYSTORE_PATH=$RUNNER_TEMP/urbano-release.p12" >> "$GITHUB_ENV"
-      - name: Set monotonic version code
+      - name: Set increasing app version
         run: |
-          echo "URBANO_VERSION_CODE=$((109 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "URBANO_VERSION_CODE=$((106 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
           echo "URBANO_VERSION_NAME=urbano-$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
-      - name: Configure persistent signing and version
-        run: python3 .github/workflows/configure-release.py
-      - name: Build signed release APK
+      - name: Configure signing and version
         env:
           URBANO_KEYSTORE_PASSWORD: ${{ secrets.URBANO_KEYSTORE_PASSWORD }}
           URBANO_KEY_ALIAS: ${{ secrets.URBANO_KEY_ALIAS }}
           URBANO_KEY_PASSWORD: ${{ secrets.URBANO_KEY_PASSWORD }}
+        run: python3 .github/workflows/configure-release.py
+      - name: Build signed release APK
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon assembleRelease
