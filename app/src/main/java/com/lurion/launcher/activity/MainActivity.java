@@ -47,18 +47,16 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Obfuscacao leve: oculta o host de buscas simples em strings do APK.
-    // Isso nao torna o IP secreto contra engenharia reversa.
-    private static String defaultServerHost() {
-        final int key = 0x5A;
-        final int[] encoded = {107, 109, 99, 116, 107, 99, 98, 116, 107, 106, 111, 116, 107, 108, 109};
-        StringBuilder value = new StringBuilder(encoded.length);
-        for (int item : encoded) value.append((char) (item ^ key));
-        return value.toString();
+    // Keep the connection endpoint out of launcher labels and persisted display strings.
+    private static String displayServerName(String candidate) {
+        if (candidate == null || candidate.trim().isEmpty()) return "Urbano City";
+        String value = candidate.trim();
+        if (value.matches("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d{1,5})?$")) return "Urbano City";
+        return value;
     }
 
     private EditText nickname;
-    private String selectedServer = defaultServerHost();
+    private String selectedServer = "Urbano City";
     private String serverPort = "7101";
     private static final int PERMISSION_REQUEST_CODE = 1000;
     private boolean permissionsGranted = false;
@@ -745,7 +743,7 @@ public class MainActivity extends AppCompatActivity {
         if (!settingsFile.exists()) {
             try {
                 writeIniValue(settingsFile, "client", "name", "");
-                writeIniValue(settingsFile, "client", "server", "ТЕСТ");
+                writeIniValue(settingsFile, "client", "server", "Urbano City");
                 writeIniValue(settingsFile, "debug", "debug", "false");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -755,7 +753,7 @@ public class MainActivity extends AppCompatActivity {
         File serverIniFile = new File(sampDir, "serv.ini");
         if (!serverIniFile.exists()) {
             try {
-                writeIniValue(serverIniFile, "server", "name", defaultServerHost());
+                writeIniValue(serverIniFile, "server", "name", "Urbano City");
                 writeIniValue(serverIniFile, "server", "port", "7101");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -771,7 +769,7 @@ public class MainActivity extends AppCompatActivity {
                 String serverPortFromIni = readIniValue(serverIniFile, "server", "port");
 
                 if (serverName != null && !serverName.isEmpty()) {
-                    selectedServer = serverName;
+                    selectedServer = displayServerName(serverName);
                 }
                 if (serverPortFromIni != null && !serverPortFromIni.isEmpty()) {
                     serverPort = serverPortFromIni;
@@ -779,8 +777,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
         } catch (Exception e) {
-            selectedServer = "ТЕСТ";
-            serverPort = "7777";
+            selectedServer = "Urbano City";
+            serverPort = "7101";
         }
     }
 
@@ -792,7 +790,7 @@ public class MainActivity extends AppCompatActivity {
                 String serverPortFromIni = readIniValue(serverIniFile, "server", "port");
 
                 if (serverName != null && !serverName.isEmpty()) {
-                    selectedServer = serverName;
+                    selectedServer = displayServerName(serverName);
                 }
                 if (serverPortFromIni != null && !serverPortFromIni.isEmpty()) {
                     serverPort = serverPortFromIni;
@@ -803,13 +801,13 @@ public class MainActivity extends AppCompatActivity {
             if (settingsFile.exists()) {
                 String savedServer = readIniValue(settingsFile, "client", "server");
                 if (savedServer != null && !savedServer.isEmpty() && selectedServer == null) {
-                    selectedServer = savedServer;
+                    selectedServer = displayServerName(savedServer);
                 }
             }
 
         } catch (Exception e) {
-            selectedServer = "ТЕСТ";
-            serverPort = "7777";
+            selectedServer = "Urbano City";
+            serverPort = "7101";
         }
     }
 
@@ -819,8 +817,8 @@ public class MainActivity extends AppCompatActivity {
             if (settingsFile.exists()) {
                 String savedServer = readIniValue(settingsFile, "client", "server");
                 if (savedServer != null && savedServer.equals("ТЕСТ")) {
-                    writeIniValue(settingsFile, "client", "server", "ТЕСТ");
-                    selectedServer = "ТЕСТ";
+                    writeIniValue(settingsFile, "client", "server", "Urbano City");
+                    selectedServer = "Urbano City";
                 }
             }
 
@@ -828,13 +826,13 @@ public class MainActivity extends AppCompatActivity {
             if (serverIniFile.exists()) {
                 String serverName = readIniValue(serverIniFile, "server", "name");
                 if (serverName != null && serverName.equals("ТЕСТ")) {
-                    writeIniValue(serverIniFile, "server", "name", defaultServerHost());
-                    selectedServer = "ТЕСТ";
+                    writeIniValue(serverIniFile, "server", "name", "Urbano City");
+                    selectedServer = "Urbano City";
                 }
             }
 
             if (selectedServer != null && selectedServer.equals("ТЕСТ")) {
-                selectedServer = "ТЕСТ";
+                selectedServer = "Urbano City";
             }
 
         } catch (Exception e) {
@@ -1096,7 +1094,7 @@ public class MainActivity extends AppCompatActivity {
             if (f.exists()) {
                 String savedServer = readIniValue(f, "client", "server");
                 if (savedServer != null && !savedServer.isEmpty()) {
-                    selectedServer = savedServer;
+                    selectedServer = displayServerName(savedServer);
                 }
             }
         } catch (Exception e) {
@@ -1185,18 +1183,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setSelectedServer(String serverName, String port) {
-        this.selectedServer = serverName;
+        this.selectedServer = displayServerName(serverName);
         this.serverPort = port;
 
         try {
             File serverIniFile = new File(Api.GAME_CACHE_PATH, "SAMP/serv.ini");
-            writeIniValue(serverIniFile, "server", "name", serverName);
+            writeIniValue(serverIniFile, "server", "name", displayServerName(serverName));
             writeIniValue(serverIniFile, "server", "port", port);
 
             File settingsFile = new File(Api.GAME_CACHE_PATH, "SAMP/settings.ini");
-            writeIniValue(settingsFile, "client", "server", serverName);
+            writeIniValue(settingsFile, "client", "server", displayServerName(serverName));
 
-            safeShowToast("Сервер изменен на: " + serverName);
+            safeShowToast("Сервер изменен на: " + displayServerName(serverName));
 
         } catch (Exception e) {
             safeShowToast("Ошибка сохранения сервера");
