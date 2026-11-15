@@ -54,14 +54,17 @@ jobs:
           echo "URBANO_VERSION_NAME=urbano-$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
       - name: Configure signing and version
         env:
+          URBANO_KEYSTORE_PATH: ${{ env.URBANO_KEYSTORE_PATH }}
           URBANO_KEYSTORE_PASSWORD: ${{ secrets.URBANO_KEYSTORE_PASSWORD }}
           URBANO_KEY_ALIAS: ${{ secrets.URBANO_KEY_ALIAS }}
           URBANO_KEY_PASSWORD: ${{ secrets.URBANO_KEY_PASSWORD }}
+          URBANO_VERSION_CODE: ${{ env.URBANO_VERSION_CODE }}
+          URBANO_VERSION_NAME: ${{ env.URBANO_VERSION_NAME }}
         run: python3 .github/workflows/configure-release.py
       - name: Build signed release APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --init-script .github/workflows/signing.init.gradle assembleRelease
+          ./gradlew --no-daemon assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: projeto-urbano-release-${{ github.run_number }}
