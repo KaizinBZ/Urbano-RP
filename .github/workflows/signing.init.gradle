@@ -1,28 +1,18 @@
-gradle.beforeProject { project ->
-    project.plugins.withId('com.android.application') {
-        project.afterEvaluate {
-            def android = project.extensions.getByName('android')
-            def keyPath = System.getenv('URBANO_KEYSTORE_PATH')
-            def storePass = System.getenv('URBANO_KEYSTORE_PASSWORD')
-            def alias = System.getenv('URBANO_KEY_ALIAS')
-            def keyPass = System.getenv('URBANO_KEY_PASSWORD')
-            def versionCode = System.getenv('URBANO_VERSION_CODE')
-            def versionName = System.getenv('URBANO_VERSION_NAME')
-            if (!keyPath || !storePass || !alias || !keyPass || !versionCode || !versionName)
-                throw new GradleException('Persistent signing/version secrets are missing')
-
-            def signing = android.signingConfigs.findByName('urbanoRelease')
-            if (signing == null) signing = android.signingConfigs.create('urbanoRelease')
-            signing.storeType = 'PKCS12'
-            signing.storeFile = new File(keyPath)
-            signing.storePassword = storePass
-            signing.keyAlias = alias
-            signing.keyPassword = keyPass
-
-            // Set after app/build.gradle configuration, but before Android variants are created.
-            android.buildTypes.getByName('release').signingConfig = signing
-            android.defaultConfig.versionCode = Integer.parseInt(versionCode)
-            android.defaultConfig.versionName = versionName
-        }
-    }
+gradle.projectsEvaluated {
+    def project = gradle.rootProject.findProject(':app')
+    if (project == null) throw new GradleException('Android :app module not found')
+    def android = project.extensions.findByName('android')
+    if (android == null) throw new GradleException('Android application plugin did not configure :app')
+    def cfg = android.signingConfigs.findByName('urbanoRelease')
+    if (cfg == null) throw new GradleException('urbanoRelease signing config missing')
+    def required = ['URBANO_KEYSTORE_PATH','URBANO_KEYSTORE_PASSWORD','URBANO_KEY_ALIAS','URBANO_KEY_PASSWORD']
+    def missing = required.findAll { !System.getenv(it) }
+    if (!missing.empty) throw new GradleException('Missing release signing environment: ' + missing.join(', '))
+    cfg.storeFile = new File(System.getenv('URBANO_KEYSTORE_PATH'))
+    cfg.storeType = 'PKCS12'
+    cfg.storePassword = System.getenv('URBANO_KEYSTORE_PASSWORD')
+    cfg.keyAlias = System.getenv('URBANO_KEY_ALIAS')
+    cfg.keyPassword = System.getenv('URBANO_KEY_PASSWORD')
+    android.buildTypes.getByName('release').signingConfig = cfg
+    if (!cfg.storePassword) throw new GradleException('Keystore password unavailable')
 }
