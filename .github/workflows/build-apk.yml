@@ -61,7 +61,7 @@ jobs:
       - name: Build signed release APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew --no-daemon --init-script .github/workflows/signing.init.gradle assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: projeto-urbano-release-${{ github.run_number }}
