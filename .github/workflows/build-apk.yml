@@ -11,10 +11,13 @@ on:
       - "settings.gradle"
       - "build.gradle"
       - "gradle/wrapper/gradle-wrapper.properties"
-      - ".github/workflows/**"
 
 permissions:
   contents: read
+
+concurrency:
+  group: urbano-release-build
+  cancel-in-progress: true
 
 jobs:
   build:
