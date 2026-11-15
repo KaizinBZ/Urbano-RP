@@ -1,0 +1,24 @@
+gradle.beforeProject { project ->
+    project.plugins.withId('com.android.application') {
+        def android = project.extensions.getByName('android')
+        def keyPath = System.getenv('URBANO_KEYSTORE_PATH')
+        def storePass = System.getenv('URBANO_KEYSTORE_PASSWORD')
+        def alias = System.getenv('URBANO_KEY_ALIAS')
+        def keyPass = System.getenv('URBANO_KEY_PASSWORD')
+        def versionCode = System.getenv('URBANO_VERSION_CODE')
+        def versionName = System.getenv('URBANO_VERSION_NAME')
+        if (!keyPath || !storePass || !alias || !keyPass || !versionCode || !versionName)
+            throw new GradleException('Persistent signing/version secrets are missing')
+
+        def signing = android.signingConfigs.findByName('urbanoRelease')
+        if (signing == null) signing = android.signingConfigs.create('urbanoRelease')
+        signing.storeType = 'PKCS12'
+        signing.storeFile = new File(keyPath)
+        signing.storePassword = storePass
+        signing.keyAlias = alias
+        signing.keyPassword = keyPass
+        android.buildTypes.getByName('release').signingConfig = signing
+        android.defaultConfig.versionCode = Integer.parseInt(versionCode)
+        android.defaultConfig.versionName = versionName
+    }
+}
