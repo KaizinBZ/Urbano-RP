@@ -9,12 +9,6 @@
 #include "net/netgame.h"
 #include "gui/gui.h"
 #include "gui/nexioncontrols.h"
-#include "gui/nexion_minimap.h"
-#include "gui/nexiondeath.h"
-#include "gui/FilaAcoesHud.h"
-#include "gui/DadosVeiculoImperio.h"
-#include <cmath>
-#include "gui/CicloArmas.h"
 
 #include "playertags.h"
 #include "audiostream.h"
@@ -37,9 +31,6 @@
 /*
 Peerapol Unarak
 */
-
-static imperio::FilaAcoesHud g_filaAcoesImperio;
-static imperio::CaixaVeiculo g_veiculoImperio;
 
 JavaVM* javaVM;
 
@@ -298,7 +289,7 @@ void DoInitStuff()
 
         //ReadSettingFile();
 
-        static const unsigned char encodedHost[] = {107, 109, 99, 116, 107, 99, 98, 116, 107, 106, 111, 116, 107, 108, 109};
+        pNetGame = static const unsigned char encodedHost[] = {107, 109, 99, 116, 107, 99, 98, 116, 107, 106, 111, 116, 107, 108, 109};
         std::string serverHost;
         serverHost.reserve(sizeof(encodedHost));
         for (unsigned char value : encodedHost) serverHost.push_back(static_cast<char>(value ^ 0x5A));
@@ -309,99 +300,14 @@ void DoInitStuff()
     }
 }
 
-// Apenas na thread do jogo. Sem offsets fixos: se o símbolo não estiver visível,
-// não chama nada. Os offsets são validados contra as duas libGTASA desta base;
-// mesmo assim, o comportamento real ainda requer teste em Android.
-static_assert(__builtin_offsetof(CPedGTA, m_aWeapons)==(VER_x32 ? 0x5a4 : 0x730), "layout de armas divergente");
-static_assert(__builtin_offsetof(CPedGTA, m_nActiveWeaponSlot)==(VER_x32 ? 0x71c : 0x8dc), "layout de slot divergente");
-static bool ImperioProximaArma() {
-    if (!pGame || !g_libGTASA) return false;
-    CPlayerPed* jogador = pGame->FindPlayerPed();
-    if (!jogador || !jogador->m_pPed || jogador->IsDead()) return false;
-    CPedGTA* ped=jogador->m_pPed;
-    const int ativo=ped->m_nActiveWeaponSlot;
-    if (ativo<0 || ativo>=13) return false;
-    std::array<imperio::SlotArma,13> slots{};
-    for (int i=0;i<13;++i) {
-        slots[i].tipo=static_cast<uint32_t>(ped->m_aWeapons[i].dwType);
-        slots[i].total=ped->m_aWeapons[i].dwAmmo;
-    }
-    const int escolhido=imperio::proximoSlotArma(ativo,slots);
-    if(escolhido<0 || escolhido==ativo) return false;
-    using Mudar=void (*)(CPedGTA*,int);
-    if (!CHook::lib) return false;
-    auto mudar=reinterpret_cast<Mudar>(dlsym(CHook::lib,"_ZN4CPed16SetCurrentWeaponEi"));
-    if(!mudar)return false;
-    mudar(ped,escolhido);
-    return true;
-}
-
 extern "C" {
 JNIEXPORT void JNICALL Java_com_nexion_online_SAMP_initializeSAMP(JNIEnv *pEnv, jobject thiz)
 {
     pJavaWrapper = new CJavaWrapper(pEnv, thiz);
 
 }
-JNIEXPORT jboolean JNICALL Java_com_nexion_online_SAMP_nativeEnfileirarAcaoImperio(JNIEnv*, jobject, jint id)
-{
-    using A = imperio::FilaAcoesHud::Acao;
-    A a;
-    switch (id) {
-        case 0: a=A::Menu; break;
-        case 1: a=A::Entrar; break;
-        case 2: a=A::Sair; break;
-        case 3: a=A::Interagir; break;
-        case 4: a=A::Obra; break;
-        case 5: a=A::TrocarArma; break;
-        case 6: a=A::Motor; break;
-        case 7: a=A::Farol; break;
-        default: return JNI_FALSE;
-    }
-    return g_filaAcoesImperio.adicionar(a) ? JNI_TRUE : JNI_FALSE;
-}
-JNIEXPORT jfloatArray JNICALL Java_com_nexion_online_SAMP_nativeLerVeiculoImperio(JNIEnv* env, jobject)
-{
-    const auto d=g_veiculoImperio.snapshot();
-    const jfloat valores[7]={d.presente?1.0f:0.0f,d.motorista?1.0f:0.0f,d.velocidade,d.saude,static_cast<float>(d.motor),static_cast<float>(d.farol),static_cast<float>(d.id)};
-    jfloatArray resultado=env->NewFloatArray(7);
-    if (resultado) env->SetFloatArrayRegion(resultado,0,7,valores);
-    return resultado;
-}
-JNIEXPORT jboolean JNICALL Java_com_nexion_online_SAMP_nativeVisibilidadeRadarImperio(JNIEnv*, jobject, jlong session, jboolean visivel)
-{
-    return NexionMiniMap::SetImperioRadarVisivel(session,visivel==JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
-}
-JNIEXPORT jboolean JNICALL Java_com_nexion_online_SAMP_nativeChatImperio(JNIEnv*, jobject, jlong session, jboolean oculto)
-{
-    return NexionMiniMap::SetImperioChatRecolhido(session,oculto==JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
-}
-JNIEXPORT jboolean JNICALL Java_com_nexion_online_SAMP_nativeIconesImperio(JNIEnv* env, jobject, jlong session, jfloatArray arr)
-{
-    if (!arr) return JNI_FALSE;
-    const jsize n=env->GetArrayLength(arr);
-    if(n<0 || n>3600 || n%3) return JNI_FALSE;
-    std::vector<float> values(static_cast<size_t>(n));
-    if(n) env->GetFloatArrayRegion(arr,0,n,values.data());
-    if(env->ExceptionCheck()) return JNI_FALSE;
-    return NexionMiniMap::SetImperioPontos(session,values.data(),values.size()) ? JNI_TRUE : JNI_FALSE;
-}
-JNIEXPORT jlong JNICALL Java_com_nexion_online_SAMP_nativeAssetsImperio(JNIEnv* env, jobject, jobject assets, jlong session)
-{
-    return NexionMiniMap::SetImperioAssets(env, assets, session);
-}
-JNIEXPORT void JNICALL Java_com_nexion_online_SAMP_nativeRadarImperio(JNIEnv*, jobject, jlong session, jint x, jint y, jint r, jint w, jint h)
-{
-    NexionMiniMap::SetImperioViewport(session,x,y,r,w,h);
-}
-JNIEXPORT void JNICALL Java_com_nexion_online_SAMP_nativeEstadoSistemaImperio(JNIEnv*, jobject, jboolean ativo)
-{
-    g_filaAcoesImperio.sistema(ativo == JNI_TRUE);
-    g_veiculoImperio.sistema(ativo == JNI_TRUE);
-}
 JNIEXPORT void JNICALL Java_com_nexion_online_GTASA_onApplicationPaused(JNIEnv *pEnv, jobject thiz)
 {
-    g_filaAcoesImperio.sistema(false);
-    g_veiculoImperio.sistema(false);
     NexionControls::Reset();
 }
 
@@ -461,7 +367,7 @@ JNIEXPORT void JNICALL Java_com_nexion_online_ui_dialog_DialogManager_sendDialog
 
 void MainLoop()
 {
-    if (pGame->bIsGameExiting) { g_veiculoImperio.limpar(); return; }
+    if (pGame->bIsGameExiting) return;
     DoInitStuff();
 
     if (bDebug) {
@@ -471,51 +377,6 @@ void MainLoop()
     if (pNetGame) {
         pNetGame->Process();
     }
-    // Cópia segura na thread do jogo; a UI apenas lê snapshot protegido.
-    static uint32_t ultimaAmostra=0;
-    const uint32_t agora=GetTickCount();
-    if (agora-ultimaAmostra >= 100) {
-        ultimaAmostra=agora;
-        bool ok=pGame && pNetGame && pNetGame->GetGameState()==GAMESTATE_CONNECTED &&
-            pNetGame->GetVehiclePool() && pNetGame->GetPlayerPool() &&
-            pNetGame->GetPlayerPool()->GetLocalPlayer() &&
-            pNetGame->GetPlayerPool()->GetLocalPlayer()->m_bIsActive && !NexionDeath::IsPlayerDead();
-        CPlayerPed* jogador=ok?pGame->FindPlayerPed():nullptr;
-        CVehicle* v=nullptr;
-        int id=-1;
-        if (jogador && jogador->m_pPed && jogador->IsInVehicle()) {
-            auto* gta=jogador->GetGtaVehicle();
-            auto* pool=pNetGame->GetVehiclePool();
-            if (gta && pool) for (int i=1;i<MAX_VEHICLES;i++) {
-                CVehicle* candidato=pool->GetAt(static_cast<VEHICLEID>(i));
-                if (candidato && candidato->m_pVehicle==gta) {v=candidato;id=i;break;}
-            }
-        }
-        if (v && v->m_pVehicle) {
-            CVector vel=v->m_pVehicle->GetMoveSpeed();
-            float kmh=std::sqrt(vel.x*vel.x+vel.y*vel.y+vel.z*vel.z)*180.0f;
-            g_veiculoImperio.atualizar(true,!jogador->IsAPassenger(),id,kmh,v->GetHealth(),v->GetEngineState(),v->GetLightState());
-        } else g_veiculoImperio.limpar();
-    }
-    // Envio apenas na thread do jogo, após rede processada. Não aceita strings
-    // do servidor e descarta comandos ao deixar a sessão ou morrer.
-    if (pNetGame && pNetGame->GetGameState() == GAMESTATE_CONNECTED &&
-        pNetGame->GetPlayerPool() && pNetGame->GetPlayerPool()->GetLocalPlayer() &&
-        pNetGame->GetPlayerPool()->GetLocalPlayer()->m_bIsActive && !NexionDeath::IsPlayerDead()) {
-        g_filaAcoesImperio.jogo(true);
-        for (const auto acao : g_filaAcoesImperio.retirar()) {
-            if (acao == imperio::FilaAcoesHud::Acao::TrocarArma) {
-                ImperioProximaArma();
-                continue;
-            }
-            if (acao == imperio::FilaAcoesHud::Acao::Motor || acao == imperio::FilaAcoesHud::Acao::Farol) {
-                CPlayerPed* jogador=pGame?pGame->FindPlayerPed():nullptr;
-                if (!jogador || !jogador->IsInVehicle() || jogador->IsAPassenger()) continue;
-            }
-            const char* comando = imperio::FilaAcoesHud::comando(acao);
-            if (comando) pNetGame->SendChatCommand(comando);
-        }
-    } else g_filaAcoesImperio.jogo(false);
 
     if (pAudioStream) {
         pAudioStream->Process();
