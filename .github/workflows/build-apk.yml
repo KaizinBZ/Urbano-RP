@@ -46,19 +46,23 @@ jobs:
         run: |
           test -n "$KEYSTORE_BASE64" || (echo 'Persistent signing key is not configured' >&2; exit 1)
           test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/urbano-release.jks"
-          chmod 600 "$RUNNER_TEMP/urbano-release.jks"
-          echo "URBANO_KEYSTORE_PATH=$RUNNER_TEMP/urbano-release.jks" >> "$GITHUB_ENV"
-      - name: Build signed release APK without downgrades
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/urbano-release.p12"
+          chmod 600 "$RUNNER_TEMP/urbano-release.p12"
+          echo "URBANO_KEYSTORE_PATH=$RUNNER_TEMP/urbano-release.p12" >> "$GITHUB_ENV"
+      - name: Set monotonic version code
+        run: |
+          echo "URBANO_VERSION_CODE=$((109 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "URBANO_VERSION_NAME=urbano-$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+      - name: Configure persistent signing and version
+        run: python3 .github/workflows/configure-release.py
+      - name: Build signed release APK
         env:
           URBANO_KEYSTORE_PASSWORD: ${{ secrets.URBANO_KEYSTORE_PASSWORD }}
           URBANO_KEY_ALIAS: ${{ secrets.URBANO_KEY_ALIAS }}
           URBANO_KEY_PASSWORD: ${{ secrets.URBANO_KEY_PASSWORD }}
-          URBANO_VERSION_CODE: ${{ 109 + github.run_number }}
-          URBANO_VERSION_NAME: urbano-${{ github.run_number }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --init-script .github/workflows/signing.init.gradle assembleRelease
+          ./gradlew --no-daemon assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: projeto-urbano-release-${{ github.run_number }}
