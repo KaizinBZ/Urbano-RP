@@ -19,3 +19,8 @@ A API/cache Nexion ainda não foi integrada. Endpoints `.invalid` permanecem ina
 O responsável pelo projeto autorizou este teste a consumir `https://samp-mobile.shop/files.json`. O app baixa por HTTPS os arquivos do manifesto (316 entradas consultadas em 27/11/2026, aproximadamente 1,12 GB), verifica host, caminho e tamanho, salva nas pastas relativas esperadas e só marca o cache como pronto após concluir tudo. `.htaccess` é ignorado. Reserve aproximadamente o total faltante mais 64 MB livres. A lista não fornece hashes de conteúdo; a compatibilidade final da cache e o início do jogo ainda precisam de validação num aparelho.
 
 Isso conecta apenas o download dos arquivos do jogo. As APIs para notícias/lista de servidores do launcher e a conexão de rede ao servidor `179.198.105.167:7101` não foram migradas da Nexion e não são declaradas funcionais por este ajuste.
+
+
+## Diagnóstico de crash
+
+O botão `Enviar log` agora cria `diagnostico_urbano.txt` com o `crash_log.txt`/`log.txt` nativos salvos pelo jogo e tenta coletar as últimas 2.000 linhas do `logcat`. Em seguida abre o seletor nativo de compartilhamento via FileProvider. O Android pode restringir linhas de outros processos; por isso, o log nativo do jogo é incluído primeiro. O relatório é local e só sai do aparelho se a pessoa escolher compartilhar; revisar antes de enviar porque pode conter dados do aparelho/apelido.
