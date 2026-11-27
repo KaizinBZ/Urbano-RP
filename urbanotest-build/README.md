@@ -29,3 +29,8 @@ O botão `Enviar log` agora cria `diagnostico_urbano.txt` com o `crash_log.txt`/
 ## Correção do encerramento na primeira inicialização
 
 O diagnóstico do aparelho mostrou encerramento controlado pelo cliente nativo: `Cannot load settings, exiting...`, pois `SAMP/settings.ini` não existia na pasta externa privada do aplicativo. Esta build inicializa/cria o INI com seções `[client]` e `[gui]` antes de iniciar o motor e preserva as configurações já existentes, completando uma seção ausente. Isso trata a causa observada no log, mas ainda precisa ser confirmado com uma nova tentativa no aparelho.
+
+
+## Ajuste do carregamento de texturas SAMP
+
+O diagnóstico da 1.0-test.14 registrou SIGSEGV em `TextureDatabaseRuntime::SortEntries` durante o carregamento de `texdb/samp/samp.etc.tmb`, que não existe no manifesto de cache. O manifesto lista os arquivos `samp.dxt.dat/.tmb/.toc`. Esta build seleciona `DF_DXT` para a base SAMP para coincidir com os arquivos disponíveis. É uma correção experimental; a inicialização ainda deve ser testada no aparelho.
