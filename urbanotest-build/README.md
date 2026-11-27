@@ -39,3 +39,8 @@ O diagnóstico da 1.0-test.14 registrou SIGSEGV em `TextureDatabaseRuntime::Sort
 ## Ajuste de formatos de textura para o cache
 
 No diagnóstico da 1.0-test.15, a carga de `samp` avançou com DXT; o processo então tentou abrir `texdb/mobile/mobile.etc.tmb`, que não existe no manifesto. Este lista `mobile` em DXT e `menu` em PVR, além de GTA3/GTA_INT/TXD em DXT. A alteração alinha essas cargas aos formatos disponíveis. Ainda é necessário validar no aparelho; outras bases que não constam no manifesto podem exigir investigação separada.
+
+
+## Tratamento de bases ausentes no registro de texturas
+
+O diagnóstico da 1.0-test.16 mostra que SAMP, mobile, TXD, GTA3, GTA_INT e menu foram abertos nos formatos listados. Em seguida, o loader não encontrou `texdb/cars/cars.txt` nem `texdb/skins/skins.txt`; o registro nativo tentava registrar mesmo assim os ponteiros nulos antes da inicialização de fontes, que caiu em `TextureDatabaseRuntime::GetTexture`. Esta build só registra `cars` quando o carregamento retorna uma base válida e usa as bases `player`/`playerhi` em PVR, que existem no manifesto. Ajuste experimental; aguarda validação no aparelho.
