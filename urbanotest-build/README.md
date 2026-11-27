@@ -34,3 +34,8 @@ O diagnóstico do aparelho mostrou encerramento controlado pelo cliente nativo: 
 ## Ajuste do carregamento de texturas SAMP
 
 O diagnóstico da 1.0-test.14 registrou SIGSEGV em `TextureDatabaseRuntime::SortEntries` durante o carregamento de `texdb/samp/samp.etc.tmb`, que não existe no manifesto de cache. O manifesto lista os arquivos `samp.dxt.dat/.tmb/.toc`. Esta build seleciona `DF_DXT` para a base SAMP para coincidir com os arquivos disponíveis. É uma correção experimental; a inicialização ainda deve ser testada no aparelho.
+
+
+## Ajuste de formatos de textura para o cache
+
+No diagnóstico da 1.0-test.15, a carga de `samp` avançou com DXT; o processo então tentou abrir `texdb/mobile/mobile.etc.tmb`, que não existe no manifesto. Este lista `mobile` em DXT e `menu` em PVR, além de GTA3/GTA_INT/TXD em DXT. A alteração alinha essas cargas aos formatos disponíveis. Ainda é necessário validar no aparelho; outras bases que não constam no manifesto podem exigir investigação separada.
