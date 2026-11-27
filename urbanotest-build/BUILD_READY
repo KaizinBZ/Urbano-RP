@@ -1,1 +1,1 @@
-Build Urbano Test after removing duplicate libbass and libbass_ssl packaged from both jniLibs and CMake.
+Build Urbano Test signed release using persistent PKCS12 Actions secrets; API/cache Nexion remains unintegrated, so this only validates signing/release packaging, not gameplay downloads.
