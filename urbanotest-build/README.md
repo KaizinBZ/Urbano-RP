@@ -44,3 +44,8 @@ No diagnóstico da 1.0-test.15, a carga de `samp` avançou com DXT; o processo e
 ## Tratamento de bases ausentes no registro de texturas
 
 O diagnóstico da 1.0-test.16 mostra que SAMP, mobile, TXD, GTA3, GTA_INT e menu foram abertos nos formatos listados. Em seguida, o loader não encontrou `texdb/cars/cars.txt` nem `texdb/skins/skins.txt`; o registro nativo tentava registrar mesmo assim os ponteiros nulos antes da inicialização de fontes, que caiu em `TextureDatabaseRuntime::GetTexture`. Esta build só registra `cars` quando o carregamento retorna uma base válida e usa as bases `player`/`playerhi` em PVR, que existem no manifesto. Ajuste experimental; aguarda validação no aparelho.
+
+
+## Endereço de conexão do Urbano Test
+
+O cliente RakNet deve iniciar conexão por UDP com `179.198.105.167:7101`, conforme o endereço fornecido para o servidor de testes. Antes desta alteração, o código nativo ainda apontava para o destino herdado `80.242.59.112:7777`. A compilação do APK confirma o endereço incorporado, mas não prova que o servidor esteja acessível nem que aceite clientes; o handshake ainda precisa ser validado no aparelho e no servidor.
