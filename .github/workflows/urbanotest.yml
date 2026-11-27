@@ -65,7 +65,14 @@ jobs:
         run: |
           APK=project/app/build/outputs/apk/release/app-release.apk
           test -s "$APK"
-          apksigner verify --verbose --print-certs "$APK" | tee /tmp/apk-signature.txt
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK_ROOT" ]; then echo 'Android SDK root is not set' >&2; exit 1; fi
+          APK_SIGNER="$SDK_ROOT/build-tools/36.0.0/apksigner"
+          if [ ! -x "$APK_SIGNER" ]; then
+            APK_SIGNER="$(find "$SDK_ROOT/build-tools" -maxdepth 2 -type f -name apksigner -print -quit)"
+          fi
+          test -x "$APK_SIGNER" || (echo "apksigner was not found under $SDK_ROOT/build-tools" >&2; exit 1)
+          "$APK_SIGNER" verify --verbose --print-certs "$APK" | tee /tmp/apk-signature.txt
           grep 'Signer #1 certificate SHA-256 digest:' /tmp/apk-signature.txt >> "$GITHUB_STEP_SUMMARY"
           echo "Version: $URBANO_VERSION_NAME (code $URBANO_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload APK artifact
