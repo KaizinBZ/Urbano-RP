@@ -61,6 +61,12 @@ jobs:
           URBANO_VERSION_CODE: ${{ env.URBANO_VERSION_CODE }}
           URBANO_VERSION_NAME: ${{ env.URBANO_VERSION_NAME }}
         run: chmod +x gradlew && ./gradlew --no-daemon --stacktrace :app:assembleRelease
+      - name: Verify APK version matches release label
+        run: |
+          APK=project/app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          echo "$BADGING" | grep -F "package: name='com.kaizin.urbanotest' versionCode='$URBANO_VERSION_CODE' versionName='$URBANO_VERSION_NAME'"
       - name: Verify APK signature and report fingerprint
         run: |
           APK=project/app/build/outputs/apk/release/app-release.apk
