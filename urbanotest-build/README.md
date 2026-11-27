@@ -12,3 +12,10 @@ A keystore privada não é publicada no repositório. O workflow usa os Actions 
 ## Downloads do jogo
 
 A API/cache Nexion ainda não foi integrada. Endpoints `.invalid` permanecem inativos; o host e porta `179.198.105.167:7101` são do servidor do jogo, não um endpoint HTTP/cache. Esta build não pode baixar o cache até que a integração de endpoints e formatos compatíveis seja feita.
+
+
+## Cache Nexion autorizada para o teste
+
+O responsável pelo projeto autorizou este teste a consumir `https://samp-mobile.shop/files.json`. O app baixa por HTTPS os arquivos do manifesto (316 entradas consultadas em 27/11/2026, aproximadamente 1,12 GB), verifica host, caminho e tamanho, salva nas pastas relativas esperadas e só marca o cache como pronto após concluir tudo. `.htaccess` é ignorado. Reserve aproximadamente o total faltante mais 64 MB livres. A lista não fornece hashes de conteúdo; a compatibilidade final da cache e o início do jogo ainda precisam de validação num aparelho.
+
+Isso conecta apenas o download dos arquivos do jogo. As APIs para notícias/lista de servidores do launcher e a conexão de rede ao servidor `179.198.105.167:7101` não foram migradas da Nexion e não são declaradas funcionais por este ajuste.
