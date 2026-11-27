@@ -24,3 +24,8 @@ Isso conecta apenas o download dos arquivos do jogo. As APIs para notícias/list
 ## Diagnóstico de crash
 
 O botão `Enviar log` agora cria `diagnostico_urbano.txt` com o `crash_log.txt`/`log.txt` nativos salvos pelo jogo e tenta coletar as últimas 2.000 linhas do `logcat`. Em seguida abre o seletor nativo de compartilhamento via FileProvider. O Android pode restringir linhas de outros processos; por isso, o log nativo do jogo é incluído primeiro. O relatório é local e só sai do aparelho se a pessoa escolher compartilhar; revisar antes de enviar porque pode conter dados do aparelho/apelido.
+
+
+## Correção do encerramento na primeira inicialização
+
+O diagnóstico do aparelho mostrou encerramento controlado pelo cliente nativo: `Cannot load settings, exiting...`, pois `SAMP/settings.ini` não existia na pasta externa privada do aplicativo. Esta build inicializa/cria o INI com seções `[client]` e `[gui]` antes de iniciar o motor e preserva as configurações já existentes, completando uma seção ausente. Isso trata a causa observada no log, mas ainda precisa ser confirmado com uma nova tentativa no aparelho.
