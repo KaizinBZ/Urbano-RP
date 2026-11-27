@@ -6,7 +6,10 @@ on:
     paths:
       - 'urbanotest-build/BUILD_READY'
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: urbanotest-release-build
+  cancel-in-progress: false
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -26,13 +29,59 @@ jobs:
         uses: android-actions/setup-android@v4
       - name: Install Android SDK, NDK and CMake
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.0.13004108' 'cmake;3.22.1'
-      - name: Build debug APK
+      - name: Restore persistent Urbano signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.URBANO_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || (echo 'Persistent signing key is not configured' >&2; exit 1)
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/urbano-release.p12"
+          chmod 600 "$RUNNER_TEMP/urbano-release.p12"
+          echo "URBANO_KEYSTORE_PATH=$RUNNER_TEMP/urbano-release.p12" >> "$GITHUB_ENV"
+      - name: Set increasing Urbano Test version
+        run: |
+          echo "URBANO_VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "URBANO_VERSION_NAME=1.0-test.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+      - name: Configure persistent signing and version
         working-directory: project
-        run: chmod +x gradlew && ./gradlew --no-daemon --stacktrace :app:assembleDebug
+        env:
+          URBANO_KEYSTORE_PATH: ${{ env.URBANO_KEYSTORE_PATH }}
+          URBANO_KEYSTORE_PASSWORD: ${{ secrets.URBANO_KEYSTORE_PASSWORD }}
+          URBANO_KEY_ALIAS: ${{ secrets.URBANO_KEY_ALIAS }}
+          URBANO_KEY_PASSWORD: ${{ secrets.URBANO_KEY_PASSWORD }}
+          URBANO_VERSION_CODE: ${{ env.URBANO_VERSION_CODE }}
+          URBANO_VERSION_NAME: ${{ env.URBANO_VERSION_NAME }}
+        run: python3 ../.github/workflows/configure-release.py
+      - name: Build signed release APK
+        working-directory: project
+        env:
+          URBANO_KEYSTORE_PATH: ${{ env.URBANO_KEYSTORE_PATH }}
+          URBANO_KEYSTORE_PASSWORD: ${{ secrets.URBANO_KEYSTORE_PASSWORD }}
+          URBANO_KEY_ALIAS: ${{ secrets.URBANO_KEY_ALIAS }}
+          URBANO_KEY_PASSWORD: ${{ secrets.URBANO_KEY_PASSWORD }}
+          URBANO_VERSION_CODE: ${{ env.URBANO_VERSION_CODE }}
+          URBANO_VERSION_NAME: ${{ env.URBANO_VERSION_NAME }}
+        run: chmod +x gradlew && ./gradlew --no-daemon --stacktrace :app:assembleRelease
+      - name: Verify APK signature and report fingerprint
+        run: |
+          APK=project/app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          apksigner verify --verbose --print-certs "$APK" | tee /tmp/apk-signature.txt
+          grep 'Signer #1 certificate SHA-256 digest:' /tmp/apk-signature.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "Version: $URBANO_VERSION_NAME (code $URBANO_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Urbano-Test-debug
-          path: project/app/build/outputs/apk/debug/app-debug.apk
+          name: Urbano-Test-release-${{ github.run_number }}
+          path: project/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
+      - name: Publish APK release download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URBANO_VERSION_NAME: ${{ env.URBANO_VERSION_NAME }}
+        run: |
+          TAG="urbanotest-${URBANO_VERSION_NAME}"
+          gh release create "$TAG" project/app/build/outputs/apk/release/app-release.apk \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Urbano Test ${URBANO_VERSION_NAME}" \
+            --notes-file project/README.URBANO_TEST.md
