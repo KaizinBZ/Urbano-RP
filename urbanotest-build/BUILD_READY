@@ -1,1 +1,1 @@
-Build Urbano Test signed release using persistent PKCS12 Actions secrets; API/cache Nexion remains unintegrated, so this only validates signing/release packaging, not gameplay downloads.
+Build and sign Urbano Test with authorized Nexion HTTPS cache manifest integration (files.json). Cache downloader validates HTTPS host, paths and file lengths, writes relative paths, excludes .htaccess, checks required free space and marks ready only after all files are present. Cache integration still requires on-device test; no claim of server/API integration.
