@@ -1,1 +1,1 @@
-Build after fixing Renderer.h Vehicle.h and VehicleSamp.cpp cHandlingDataMgr.h include cases
+Build Urbano Test after removing duplicate libbass and libbass_ssl packaged from both jniLibs and CMake.
