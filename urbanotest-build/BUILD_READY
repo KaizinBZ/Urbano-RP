@@ -1,1 +1,1 @@
-Build after fixing Renderer.h include path case (Vehicle.h)
+Build after fixing Renderer.h Vehicle.h and VehicleSamp.cpp cHandlingDataMgr.h include cases
