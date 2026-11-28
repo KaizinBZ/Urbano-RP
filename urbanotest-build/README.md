@@ -49,3 +49,8 @@ O diagnóstico da 1.0-test.16 mostra que SAMP, mobile, TXD, GTA3, GTA_INT e menu
 ## Endereço de conexão do Urbano Test
 
 O cliente RakNet deve iniciar conexão por UDP com `179.198.105.167:7101`, conforme o endereço fornecido para o servidor de testes. Antes desta alteração, o código nativo ainda apontava para o destino herdado `80.242.59.112:7777`. A compilação do APK confirma o endereço incorporado, mas não prova que o servidor esteja acessível nem que aceite clientes; o handshake ainda precisa ser validado no aparelho e no servidor.
+
+
+## Diagnóstico de spawn e queda de conexão
+
+O diagnóstico da 1.0-test.19 registra conexão aceita, transição para `CONNECTED`, perda posterior do link RakNet e abort JNI em `CJavaWrapper::ClearScreen`. A source agora evita invocar callbacks Java de HUD inexistentes ao limpar a tela, e registra eventos de perda/desconexão, `InitGame`, `RequestSpawn` e diálogo (sem gravar texto de senha/conteúdo do diálogo). O callback RequestSpawn segue sem ação intencional até confirmar a direção e o formato esperado no protocolo da GM; não há spawn manual especulativo. Correção/telemetria pendentes de build e teste no aparelho.
