@@ -1,0 +1,66 @@
+name: Compile clean Urbano RP GM
+on:
+  push:
+    branches: [urbanotest-gm-clean]
+    paths:
+      - 'gm-clean/GM-Clean-source.zip'
+      - 'gm-clean/BUILD_READY'
+      - '.github/workflows/build-gm-clean.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install 32-bit Pawn compiler runtime
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y libc6:i386 libgcc-s1:i386 libstdc++6:i386
+      - name: Download official open.mp Pawn compiler
+        run: |
+          curl -fsSL https://github.com/openmultiplayer/compiler/releases/download/v3.10.11/pawnc-3.10.11-linux.tar.gz -o /tmp/pawnc.tar.gz
+          mkdir -p /tmp/pawnc
+          tar -xzf /tmp/pawnc.tar.gz -C /tmp/pawnc
+          chmod +x /tmp/pawnc/pawnc-3.10.11-linux/bin/pawncc
+          echo "LD_LIBRARY_PATH=/tmp/pawnc/pawnc-3.10.11-linux/lib" >> "$GITHUB_ENV"
+      - name: Extract and compile clean GM
+        run: |
+          mkdir -p /tmp/gm
+          python3 - <<'PY'
+          import zipfile
+          z = zipfile.ZipFile('gm-clean/GM-Clean-source.zip')
+          bad = z.testzip()
+          assert bad is None, bad
+          z.extractall('/tmp/gm')
+          PY
+          /tmp/pawnc/pawnc-3.10.11-linux/bin/pawncc -i/tmp/gm/include -o/tmp/gm/GM.amx /tmp/gm/GM.pwn
+          test -s /tmp/gm/GM.amx
+          file /tmp/gm/GM.amx
+          sha256sum /tmp/gm/GM.amx | tee /tmp/gm/GM.amx.sha256
+      - name: Package server-ready test files
+        run: |
+          mkdir -p gm-clean/output
+          cp /tmp/gm/GM.amx gm-clean/output/GM.amx
+          cp /tmp/gm/README.txt gm-clean/output/README.txt
+          cp /tmp/gm/GM.pwn gm-clean/output/GM.pwn
+          cp /tmp/gm/GM.amx.sha256 gm-clean/output/GM.amx.sha256
+          cd gm-clean/output
+          zip -9 ../Urbano-RP-clean-GM-test.zip GM.amx GM.pwn README.txt GM.amx.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Urbano-RP-clean-GM-test
+          path: gm-clean/Urbano-RP-clean-GM-test.zip
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish isolated test download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="urbano-clean-gm-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" gm-clean/Urbano-RP-clean-GM-test.zip \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Urbano RP clean GM test ${GITHUB_RUN_NUMBER}" \
+            --notes "Standalone login/spawn test GM. Compiled by CI; runtime/server compatibility is not yet confirmed. Not a full roleplay gamemode."
